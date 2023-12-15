@@ -1,0 +1,191 @@
+```{r}
+"Importing Libraries"
+
+library(readxl)
+library(dplyr)
+library(ggplot2)
+library(ggfortify)
+library(factoextra)
+library(cluster)
+library(GGally)
+library(caret)
+library(dendextend)
+library(corrplot)
+```
+
+```{r}
+"Loading the Data Set"
+
+# Read the dataset from Excel file
+vehicles <- read_excel("D:/Data Science/Data Mining/Assignment/Question 3/vehicle.xlsx")
+vehicles
+dim(vehicles)
+summary(vehicles)
+```
+```{r}
+"Data Pre Processing"
+
+# Remove any irrelevant columns
+vehicles_nc <- vehicles[, -c(1, 20)] # Removing "Samples" & "Class"  attributes
+vehicles_nc
+```
+```{r}
+"Removing Outliers from the data set using Z Score"
+
+# Visualize the data before outlier removal
+boxplot(vehicles_nc)
+dim(vehicles_nc)
+
+# Detect outliers using the Z-score method
+z_scores <- apply(vehicles_nc, 2, function(x) abs((x - mean(x))/sd(x)))
+outliers <- which(z_scores > 3, arr.ind = TRUE)
+
+# Remove outliers
+vehicle_data_RO <- vehicles_nc[-outliers[,1], ]
+
+# Add the removed columns back
+vehicle_data_RO_WC <- cbind(vehicles[1:nrow(vehicle_data_RO), 1], vehicle_data_RO, vehicles[1:nrow(vehicle_data_RO), 20])
+
+# Visualize the data after outlier removal and columns added back
+boxplot(vehicle_data_RO)
+dim(vehicle_data_RO)
+```
+```{r}
+"The new Data frames"
+
+# Print the dimensions of the original data set and the cleaned data set
+dim(vehicles)             #Original data set
+dim(vehicles_nc)          #Orginal no first and last column
+dim(vehicle_data_RO)      #data removed Outliers and remove first and last cloumn
+dim(vehicle_data_RO_WC)   #data removed Outliers with first and last column
+```
+```{r}
+"Scale the data"
+vehicle_data_RO <- scale(vehicle_data_RO)
+head(vehicle_data_RO)
+```
+
+```{r}
+"Agglomerative Clustering with Single Linkage"
+
+# Perform agglomerative clustering with single linkage
+hc_single <- hclust(dist(vehicle_data_RO), method = "single")
+
+# Visualize the dendrogram for single linkage
+plot(hc_single, main = "Dendrogram of Hierarchical Clustering (Single Linkage)")
+
+```
+```{r}
+"Agglomerative Clustering with Single Linkage"
+
+cutHeight_single <- 0.5 * max(hc_single$height)
+
+# Single linkage dendrogram colored
+dend_single <- as.dendrogram(hc_single)
+dend_single_colored <- color_branches(dend_single, h = cutHeight_single)
+plot(dend_single_colored, main = "Single Linkage Dendrogram")
+abline(h = cutHeight_single, col = "blue", lty = 2)
+```
+
+
+```{r}
+"Agglomerative Clustering with Complete Linkage"
+
+# Perform agglomerative clustering with complete linkage
+hc_complete <- hclust(dist(vehicle_data_RO), method = "complete")
+
+# Visualize the dendrogram for complete linkage
+plot(hc_complete, main = "Dendrogram of Hierarchical Clustering (Complete Linkage)")
+```
+```{r}
+
+cutHeight_complete <- 0.5 * max(hc_complete$height)
+
+# Complete linkage dendrogram coloured
+dend_complete <- as.dendrogram(hc_complete)
+dend_complete_colored <- color_branches(dend_complete, h = cutHeight_complete)
+plot(dend_complete_colored, main = "Complete Linkage Dendrogram")
+abline(h = cutHeight_complete, col = "red", lty = 2)
+```
+
+
+```{r}
+"Agglomerative Clustering with Average Linkage"
+
+# Perform agglomerative clustering with average linkage
+hc_average <- hclust(dist(vehicle_data_RO), method = "average")
+
+# Visualize the dendrogram for average linkage
+plot(hc_average, main = "Dendrogram of Hierarchical Clustering (Average Linkage)")
+```
+```{r}
+
+
+cutHeight_average <- 0.5 * max(hc_average$height)
+# Average linkage dendrogram coloured
+dend_average <- as.dendrogram(hc_average)
+dend_average_colored <- color_branches(dend_average, h = cutHeight_average)
+plot(dend_average_colored, main = "Average Linkage Dendrogram")
+abline(h = cutHeight_average, col = "blue", lty = 2)
+```
+```{r}
+"Ward's linkage clustering"
+
+# Compute the hierarchical clustering using Ward's linkage method
+hc_ward <- hclust(dist(vehicle_data_RO), method = "ward.D2")
+
+# Calculate the cut height for the dendrogram
+cutHeight_ward <- 0.5 * max(hc_ward$height)
+
+# Color the dendrogram branches based on the cut height
+dend_ward <- as.dendrogram(hc_ward)
+dend_ward_colored <- color_branches(dend_ward, h = cutHeight_ward)
+
+# Plot the dendrogram with the cut height marked in blue
+plot(dend_ward_colored, main = "Ward's Linkage Dendrogram")
+abline(h = cutHeight_ward, col = "blue", lty = 2)
+
+```
+
+```{r}
+"Visualizing the Clusters using a Scatterplot"
+
+# Visualize the clusters using a scatterplot
+pca_result <- prcomp(vehicle_data_RO, scale. = TRUE)
+pca_data <- as.data.frame(pca_result$x[,1:2])
+pca_data$cluster <- as.factor(clusters)
+
+ggplot(pca_data, aes(x = PC1, y = PC2, color = cluster)) +
+  geom_point(size = 3) +
+  labs(title = "Agglomerative Clustering with PCA", x = "Principal Component 1", y = "Principal Component 2")
+```
+
+
+```{r}
+"Calculating Cophenetic Correlation"
+
+# Convert dendrograms to dendrogram objects
+hc_single_dend <- as.dendrogram(hc_single)
+hc_complete_dend <- as.dendrogram(hc_complete)
+hc_average_dend <- as.dendrogram(hc_average)
+hc_ward_d2_dend <- as.dendrogram(hc)
+
+# Create a list of dendrograms
+dend_list <- dendlist(hc_single_dend, hc_complete_dend, hc_average_dend, hc_ward_d2_dend)
+
+# Calculate the cophenetic correlation between each pair of dendrograms
+cor_dend <- cor.dendlist(dend_list)
+cor_dend
+
+```
+```{r}
+"Visualizing Cophenetic Correlation"
+
+# Visualize cophenetic correlation using corrplot
+
+corrplot(cor_dend, method = "color", type = "upper", order = "hclust",
+         tl.col = "black", addCoef.col = "black")
+
+```
+
+
